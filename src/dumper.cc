@@ -5,8 +5,9 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 using std::cout;
 using std::cerr;
@@ -29,6 +30,9 @@ int analyz_opt_long(std::string arg, CLIArg* cliargp);
 int dump(std::string filename, CLIArg::Mode mode);
 
 std::string byte_to_str(char byte, CLIArg::Mode mode);
+int is_escapable(char byte);
+void sprintesc(char* ptr, char byte);
+
 std::string mode_to_str(CLIArg::Mode mode);
 
 void help();
@@ -164,6 +168,9 @@ int dump(std::string filename, CLIArg::Mode mode) {
         i++;
     }
 
+    if (i < 16)
+        cout << endl;
+
     ifs.close();
 
     return 0;
@@ -175,16 +182,21 @@ std::string byte_to_str(char byte, CLIArg::Mode mode) {
 
     switch (mode) {
     case CLIArg::Mode::x:
-        std::sprintf(output, "%x", byte);
+        std::sprintf(output, "%02x", byte);
         break;
     case CLIArg::Mode::o:
-        std::sprintf(output, "%o", byte);
+        std::sprintf(output, "%03o", byte);
         break;
     case CLIArg::Mode::c:
-        std::sprintf(output, "%c", byte);
+        if ('!' < byte && byte < '~')
+            std::sprintf(output, " %c", byte);
+        else if (is_escapable(byte))
+            sprintesc(output, byte);
+        else
+            std::sprintf(output, "%02x", byte);
         break;
     case CLIArg::Mode::d:
-        std::sprintf(output, "%d", byte);
+        std::sprintf(output, "%03d", byte);
         break;
     default:
         return "";
@@ -192,10 +204,53 @@ std::string byte_to_str(char byte, CLIArg::Mode mode) {
 
     ret = output;
 
-    if (ret.length() == 1)
-        ret = " " + ret;
-
     return ret;
+}
+
+int is_escapable(char byte) {
+    switch (byte) {
+    case '\a': case '\b':
+    case '\033': case '\f':
+    case '\n': case '\r':
+    case '\t': case '\v':
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+void sprintesc(char* ptr, char byte) {
+    std::string ret;
+    switch (byte) {
+    case '\a':
+        ret = "\\a";
+        break;
+    case '\b':
+        ret = "\\b";
+        break;
+    case '\033':
+        ret = "\\e";
+        break;
+    case '\f':
+        ret = "\\f";
+        break;
+    case '\n':
+        ret = "\\n";
+        break;
+    case '\r':
+        ret = "\\r";
+        break;
+    case '\t':
+        ret = "\\t";
+        break;
+    case '\v':
+        ret = "\\v";
+        break;
+    default:
+        std::abort();
+    }
+
+    std::strcpy(ptr, ret.c_str());
 }
 
 std::string mode_to_str(CLIArg::Mode mode) {
@@ -221,7 +276,7 @@ void help() {
         "options:\n"
         "   -x, --hex      One byte hex (default)\n"
         "   -o, --octal    One byte octal\n"
-        "   -c, --char     One byte char\n"
+        "   -c, --char     One byte char (Non printable are in hex)\n"
         "   -d, --dec      One byte decimal\n"
         "\n"
         "   -h, --help     Print this help\n"
