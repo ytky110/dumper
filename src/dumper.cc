@@ -7,7 +7,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#define VERSION "1.0.1"
+#define VERSION "1.0.2"
+#define DATE "2026-04-27"
 
 using std::cout;
 using std::cerr;
@@ -29,9 +30,9 @@ int analyz_opt_long(std::string arg, CLIArg* cliargp);
 
 int dump(std::string filename, CLIArg::Mode mode);
 
-std::string byte_to_str(char byte, CLIArg::Mode mode);
-int is_escapable(char byte);
-void sprintesc(char* ptr, char byte);
+std::string byte_to_str(unsigned char byte, CLIArg::Mode mode);
+int is_escapable(unsigned char byte);
+void sprintesc(char* ptr, unsigned char byte);
 
 std::string mode_to_str(CLIArg::Mode mode);
 
@@ -149,7 +150,7 @@ int analyz_opt_long(std::string arg, CLIArg* cliargp) {
 
 int dump(std::string filename, CLIArg::Mode mode) {
     int i = 0;
-    char byte;
+    unsigned char byte;
     std::string byte_str;
     std::ifstream ifs(filename, std::ios::binary);
 
@@ -158,7 +159,7 @@ int dump(std::string filename, CLIArg::Mode mode) {
         return 1;
     }
 
-    while (ifs.read(&byte, 1)) {
+    while (ifs.read((char*) &byte, 1)) {
         if (i > 15) {
             i = 0;
             cout << endl;
@@ -171,12 +172,10 @@ int dump(std::string filename, CLIArg::Mode mode) {
     if (i < 16)
         cout << endl;
 
-    ifs.close();
-
     return 0;
 }
 
-std::string byte_to_str(char byte, CLIArg::Mode mode) {
+std::string byte_to_str(unsigned char byte, CLIArg::Mode mode) {
     char output[16];
     std::string ret;
 
@@ -188,7 +187,7 @@ std::string byte_to_str(char byte, CLIArg::Mode mode) {
         std::sprintf(output, "%03o", byte);
         break;
     case CLIArg::Mode::c:
-        if ('!' < byte && byte < '~')
+        if ('!' <= byte && byte <= '~')
             std::sprintf(output, " %c", byte);
         else if (is_escapable(byte))
             sprintesc(output, byte);
@@ -207,7 +206,7 @@ std::string byte_to_str(char byte, CLIArg::Mode mode) {
     return ret;
 }
 
-int is_escapable(char byte) {
+int is_escapable(unsigned char byte) {
     switch (byte) {
     case '\a': case '\b':
     case '\033': case '\f':
@@ -219,7 +218,7 @@ int is_escapable(char byte) {
     }
 }
 
-void sprintesc(char* ptr, char byte) {
+void sprintesc(char* ptr, unsigned char byte) {
     std::string ret;
     switch (byte) {
     case '\a':
@@ -289,6 +288,6 @@ void version() {
         "dumper  %s\n"
         "\n"
         "Written by Yutaka Goy\n"
-        "in C++, on 2026-04-25\n"
-        , VERSION);
+        "in C++, on %s\n"
+        , VERSION, DATE);
 }
